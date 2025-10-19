@@ -1,0 +1,43 @@
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * 6'
+    
+jobs:
+  publish:
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+      
+    name: Build Chrome OS versions database
+    steps:
+      - name: download repo
+        uses: actions/checkout@v4
+
+      - name: run build
+        run: |
+          sudo apt-get install pcre2-utils
+          ./main.sh
+
+      - name: upload data as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: data/
+          compression-level: 9
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          draft: true
+          files: data/data.csv
+
+  workflow-keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: liskin/gh-workflow-keepalive@v1
